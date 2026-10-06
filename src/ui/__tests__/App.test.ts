@@ -55,4 +55,25 @@ describe('Luggage planner App', () => {
     await wrapper.get('[data-testid="print-button"]').trigger('click');
     expect(getPrintCount()).toBe(1);
   });
+
+  it('edits the orientation policy of an item and marks plans stale', async () => {
+    const { wrapper } = render();
+    expect((wrapper.get('[aria-label="摆放方向 洗护瓶"]').element as HTMLSelectElement).value).toBe('upright');
+    const select = wrapper.get('[aria-label="摆放方向 洗漱包"]');
+    expect((select.element as HTMLSelectElement).value).toBe('free');
+    await select.setValue('fixed');
+    expect(wrapper.text()).toContain('方案待更新');
+    expect((wrapper.get('[aria-label="摆放方向 洗漱包"]').element as HTMLSelectElement).value).toBe('fixed');
+  });
+
+  it('explains direction-restricted items instead of drawing them lying down', async () => {
+    const { wrapper } = render();
+    await wrapper.get('[aria-label="行李箱高度"]').setValue('10');
+    await wrapper.get('button.primary').trigger('click');
+    expect(wrapper.find('[data-item-id="bottles"]').exists()).toBe(false);
+    const unplaced = wrapper.get('[data-testid="unplaced-list"]');
+    expect(unplaced.text()).toContain('洗护瓶');
+    expect(unplaced.text()).toContain('保持直立');
+    expect(wrapper.text()).toContain('必需品未装入：洗护瓶');
+  });
 });

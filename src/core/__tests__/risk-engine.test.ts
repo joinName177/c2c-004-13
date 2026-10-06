@@ -18,6 +18,29 @@ describe('detectRisks', () => {
     expect(detectRisks(plan, suitcase, [huge]).some((risk) => risk.id === 'oversized-huge')).toBe(true);
   });
 
+  it('flags direction-restricted items instead of calling them oversized', () => {
+    const bottle = item('bottle', { length: 2, width: 2, height: 8, orientation: 'upright' });
+    const plan = { ...basePlan(), unplaced: [{ item: bottle, reason: '受「保持直立」限制，仅横放才能放入当前空间' }] };
+    const risks = detectRisks(plan, suitcase, [bottle]);
+    expect(risks.some((risk) => risk.id === 'orientation-bottle')).toBe(true);
+    expect(risks.some((risk) => risk.id === 'oversized-bottle')).toBe(false);
+    expect(risks.find((risk) => risk.id === 'orientation-bottle')?.message).toContain('保持直立');
+  });
+
+  it('keeps the oversized verdict when even free rotation cannot fit a restricted item', () => {
+    const pole = item('pole', { length: 30, width: 2, height: 2, orientation: 'fixed' });
+    const plan = { ...basePlan(), unplaced: [{ item: pole, reason: '没有可用的连续空间' }] };
+    expect(detectRisks(plan, suitcase, [pole]).some((risk) => risk.id === 'oversized-pole')).toBe(true);
+  });
+
+  it('still counts a must-have item blocked by its orientation as missing', () => {
+    const bottle = item('bottle', { length: 2, width: 2, height: 8, orientation: 'upright', mustHave: true });
+    const plan = { ...basePlan(), unplaced: [{ item: bottle, reason: '受「保持直立」限制，仅横放才能放入当前空间' }] };
+    const risks = detectRisks(plan, suitcase, [bottle]);
+    expect(risks).toContainEqual(expect.objectContaining({ id: 'missing-bottle', severity: 'critical' }));
+    expect(risks.some((risk) => risk.id === 'orientation-bottle')).toBe(true);
+  });
+
   it('reports fragile items with a box stacked above', () => {
     const glass = item('glass', { fragile: true });
     const top = item('top');

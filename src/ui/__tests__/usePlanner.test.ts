@@ -36,4 +36,15 @@ describe('usePlanner', () => {
     expect(planner.plans.value.shopping.name).toBe('购物版');
     expect(repository.saved?.selectedPlan).toBe('shopping');
   });
+
+  it('persists orientation changes and applies them after regenerating', () => {
+    const repository = new MemoryRepository();
+    const planner = usePlanner({ repository, printPort: { print() {} } });
+    planner.updateItem('toiletry', { orientation: 'upright' });
+    expect(planner.isStale.value).toBe(true);
+    expect(repository.saved?.items.find((item) => item.id === 'toiletry')?.orientation).toBe('upright');
+    planner.regenerate();
+    const placement = planner.plans.value.comfort.placements.find((p) => p.itemId === 'toiletry');
+    expect(placement?.dimensions.height).toBe(8);
+  });
 });

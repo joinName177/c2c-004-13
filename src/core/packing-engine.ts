@@ -1,8 +1,12 @@
-import { intersects, rotationsOf } from './geometry';
-import { itemVolume, suitcaseVolume, type PackingItem, type PackingPlan, type Placement, type PlanMode, type Suitcase } from './models';
+import { allowedRotations, intersects, rotationsOf } from './geometry';
+import { itemVolume, suitcaseVolume, type Dimensions, type PackingItem, type PackingPlan, type Placement, type PlanMode, type Suitcase } from './models';
 
 const PLAN_NAMES: Record<PlanMode, string> = { minimal: '精简版', comfort: '舒适版', shopping: '购物版' };
 const RESERVE: Record<PlanMode, number> = { minimal: 0.8, comfort: 1, shopping: 0.65 };
+const RESTRICTED_REASON: Record<'upright' | 'fixed', string> = {
+  upright: '受「保持直立」限制，仅横放才能放入当前空间',
+  fixed: '受「保持原方向」限制，仅旋转方向才能放入当前空间',
+};
 
 export function validateSuitcase(suitcase: Suitcase): string[] {
   const errors: string[] = [];
@@ -35,6 +39,19 @@ function candidatePoints(placements: Placement[]) {
   return points.sort((a, b) => a.z - b.z || a.y - b.y || a.x - b.x);
 }
 
+function findPlacement(suitcase: Suitcase, placements: Placement[], item: PackingItem, orientations: Dimensions[]): Placement | undefined {
+  for (const point of candidatePoints(placements)) {
+    for (const dimensions of orientations) {
+      const candidate: Placement = { itemId: item.id, ...point, dimensions };
+      const inBounds = candidate.x + dimensions.length <= suitcase.length
+        && candidate.y + dimensions.width <= suitcase.width
+        && candidate.z + dimensions.height <= suitcase.height;
+      if (inBounds && placements.every((placed) => !intersects(candidate, placed))) return candidate;
+    }
+  }
+  return undefined;
+}
+
 export function packItems(suitcase: Suitcase, items: PackingItem[], mode: PlanMode): PackingPlan {
   const placements: Placement[] = [];
   const unplaced: PackingPlan['unplaced'] = [];
@@ -57,23 +74,13 @@ export function packItems(suitcase: Suitcase, items: PackingItem[], mode: PlanMo
       continue;
     }
 
-    let placement: Placement | undefined;
-    for (const point of candidatePoints(placements)) {
-      for (const dimensions of rotationsOf(item)) {
-        const candidate: Placement = { itemId: item.id, ...point, dimensions };
-        const inBounds = candidate.x + dimensions.length <= suitcase.length
-          && candidate.y + dimensions.width <= suitcase.width
-          && candidate.z + dimensions.height <= suitcase.height;
-        if (inBounds && placements.every((placed) => !intersects(candidate, placed))) {
-          placement = candidate;
-          break;
-        }
-      }
-      if (placement) break;
-    }
-
+    const placement = findPlacement(suitcase, placements, item, allowedRotations(item));
     if (!placement) {
-      unplaced.push({ item, reason: '没有可用的连续空间' });
+      const policy = item.orientation ?? 'free';
+      const reason = policy !== 'free' && findPlacement(suitcase, placements, item, rotationsOf(item))
+        ? RESTRICTED_REASON[policy]
+        : '没有可用的连续空间';
+      unplaced.push({ item, reason });
       continue;
     }
     placements.push(placement);
