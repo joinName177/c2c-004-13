@@ -23,4 +23,13 @@ describe('generatePlans', () => {
     expect(plans.shopping.usedVolume).toBeLessThanOrEqual(plans.comfort.usedVolume);
     expect(plans.shopping.unplaced.length).toBeGreaterThanOrEqual(plans.comfort.unplaced.length);
   });
+
+  it('applies orientation constraints in all three strategies', () => {
+    const bottle = item('bottle', { length: 2, width: 2, height: 7, orientation: 'upright' });
+    const plans = generatePlans(box, [bottle]);
+    for (const plan of Object.values(plans)) {
+      expect(plan.placements).toHaveLength(0);
+      expect(plan.unplaced[0]?.reason).toContain('方向受限');
+    }
+  });
 });

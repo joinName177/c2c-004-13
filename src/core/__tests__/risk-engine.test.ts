@@ -18,6 +18,21 @@ describe('detectRisks', () => {
     expect(detectRisks(plan, suitcase, [huge]).some((risk) => risk.id === 'oversized-huge')).toBe(true);
   });
 
+  it('flags direction-constrained items instead of calling them oversized', () => {
+    const bottle = item('bottle', { length: 2, width: 2, height: 7, orientation: 'upright' });
+    const plan = { ...basePlan(), unplaced: [{ item: bottle, reason: '方向受限（保持直立）：仅横放才能装入，未放入箱内' }] };
+    const risks = detectRisks(plan, suitcase, [bottle]);
+    expect(risks).toContainEqual(expect.objectContaining({ id: 'orientation-bottle', severity: 'warning' }));
+    expect(risks.some((risk) => risk.id === 'oversized-bottle')).toBe(false);
+  });
+
+  it('still counts a must-have item lost to direction limits as missing', () => {
+    const bottle = item('bottle', { length: 2, width: 2, height: 7, orientation: 'upright', mustHave: true });
+    const plan = { ...basePlan(), unplaced: [{ item: bottle, reason: '方向受限（保持直立）：仅横放才能装入，未放入箱内' }] };
+    const risks = detectRisks(plan, suitcase, [bottle]);
+    expect(risks).toContainEqual(expect.objectContaining({ id: 'missing-bottle', severity: 'critical' }));
+  });
+
   it('reports fragile items with a box stacked above', () => {
     const glass = item('glass', { fragile: true });
     const top = item('top');

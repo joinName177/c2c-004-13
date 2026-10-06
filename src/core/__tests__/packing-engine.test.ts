@@ -37,4 +37,30 @@ describe('packItems', () => {
     expect(packItems(suitcase(), inputs, 'comfort')).toEqual(packItems(suitcase(), inputs, 'comfort'));
     expect(packItems(suitcase(), inputs, 'comfort').unplaced[0]?.reason).toContain('空间');
   });
+
+  it('turns upright items within the base plane without changing height', () => {
+    const plan = packItems(suitcase({ length: 3, width: 4, height: 2 }), [item('bottle', { length: 4, width: 3, height: 2, orientation: 'upright' })], 'comfort');
+    expect(plan.placements[0]?.dimensions).toEqual({ length: 3, width: 4, height: 2 });
+  });
+
+  it('leaves upright items out with a direction reason when only lying down fits', () => {
+    const bottle = item('bottle', { length: 2, width: 2, height: 5, orientation: 'upright' });
+    const plan = packItems(suitcase({ height: 4 }), [bottle], 'comfort');
+    expect(plan.placements).toHaveLength(0);
+    expect(plan.unplaced[0]?.reason).toContain('方向受限');
+    expect(plan.unplaced[0]?.reason).toContain('保持直立');
+  });
+
+  it('never swaps dimensions for fixed items and explains the restriction', () => {
+    const gear = item('gear', { length: 2, width: 4, height: 3, orientation: 'fixed' });
+    const plan = packItems(suitcase({ length: 4, width: 3, height: 2 }), [gear], 'comfort');
+    expect(plan.placements).toHaveLength(0);
+    expect(plan.unplaced[0]?.reason).toContain('方向受限');
+    expect(plan.unplaced[0]?.reason).toContain('保持原方向');
+  });
+
+  it('still rotates items without a constraint into the same space', () => {
+    const plan = packItems(suitcase({ length: 4, width: 3, height: 2 }), [item('gear', { length: 2, width: 4, height: 3 })], 'comfort');
+    expect(plan.placements).toHaveLength(1);
+  });
 });

@@ -55,4 +55,15 @@ describe('Luggage planner App', () => {
     await wrapper.get('[data-testid="print-button"]').trigger('click');
     expect(getPrintCount()).toBe(1);
   });
+
+  it('edits orientation limits, marks plans stale and prints final directions', async () => {
+    const { wrapper } = render();
+    expect(wrapper.text()).toContain('规划已同步');
+    const select = wrapper.get('[aria-label="摆放限制 轻薄外套"]');
+    expect((select.element as HTMLSelectElement).value).toBe('free');
+    await select.setValue('upright');
+    expect(wrapper.text()).toContain('方案待更新');
+    await wrapper.get('[aria-label="摆放限制 微单相机"]').setValue('free');
+    expect(wrapper.text()).toContain('放置方向');
+  });
 });

@@ -1,6 +1,13 @@
 export type Dimensions = Readonly<{ length: number; width: number; height: number }>;
 export type PlanMode = 'minimal' | 'comfort' | 'shopping';
 export type RiskSeverity = 'critical' | 'warning' | 'info';
+export type OrientationConstraint = 'free' | 'upright' | 'fixed';
+
+export const ORIENTATION_LABELS: Record<OrientationConstraint, string> = {
+  free: '可自由旋转',
+  upright: '保持直立',
+  fixed: '保持原方向',
+};
 
 export interface Suitcase extends Dimensions {
   maxWeight: number;
@@ -14,6 +21,7 @@ export interface PackingItem extends Dimensions {
   priority: 1 | 2 | 3;
   mustHave: boolean;
   fragile?: boolean;
+  orientation?: OrientationConstraint;
 }
 
 export interface Placement {

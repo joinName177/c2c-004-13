@@ -1,12 +1,30 @@
 import type { Dimensions, PackingItem, Placement } from './models';
 
-export function rotationsOf(item: Pick<PackingItem, 'length' | 'width' | 'height'>): Dimensions[] {
+type SizedItem = Pick<PackingItem, 'length' | 'width' | 'height'>;
+
+export function rotationsOf(item: SizedItem): Dimensions[] {
   const [a, b, c] = [item.length, item.width, item.height];
   const candidates: Dimensions[] = [
     { length: a, width: b, height: c }, { length: a, width: c, height: b },
     { length: b, width: a, height: c }, { length: b, width: c, height: a },
     { length: c, width: a, height: b }, { length: c, width: b, height: a },
   ];
+  return unique(candidates);
+}
+
+export function allowedRotations(item: SizedItem & Pick<PackingItem, 'orientation'>): Dimensions[] {
+  const constraint = item.orientation ?? 'free';
+  if (constraint === 'fixed') return [{ length: item.length, width: item.width, height: item.height }];
+  if (constraint === 'upright') {
+    return unique([
+      { length: item.length, width: item.width, height: item.height },
+      { length: item.width, width: item.length, height: item.height },
+    ]);
+  }
+  return rotationsOf(item);
+}
+
+function unique(candidates: Dimensions[]): Dimensions[] {
   return candidates.filter((value, index) => candidates.findIndex((candidate) =>
     candidate.length === value.length && candidate.width === value.width && candidate.height === value.height,
   ) === index);
